@@ -18,21 +18,27 @@ public class DataController {
     private DataProcessingGateway dataProcessingGateway;
 
     /**
-     * Test different data sources
-     * DB-123 -> routes to database processor
-     * API-456 -> routes to API processor
-     * FILE-789 -> routes to file processor
+     * Endpoint to trigger data processing
+     * POST http://localhost:8080/api/data/process
      */
     @PostMapping("/process")
     public ResponseEntity<String> processData(@RequestBody DataRequest request) {
+
+        // Simply call the gateway - it handles everything else
         dataProcessingGateway.processData(request.getDataId());
+
         return ResponseEntity.accepted()
                 .body("Data processing started for ID: " + request.getDataId());
     }
 
+    /**
+     * Endpoint that waits for result
+     */
     @PostMapping("/process-sync")
     public ResponseEntity<ProcessedData> processDataSync(@RequestBody DataRequest request) {
+
         ProcessedData result = dataProcessingGateway.processDataWithResult(request.getDataId());
+
         return ResponseEntity.ok(result);
     }
 }

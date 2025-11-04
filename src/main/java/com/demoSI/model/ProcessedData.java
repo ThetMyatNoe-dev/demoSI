@@ -3,11 +3,8 @@ package com.demoSI.model;
 public class ProcessedData {
     private String id;
     private String processedContent;
-    private String status; // SUCCESS, FAILED, PENDING
+    private String status;
     private Long processingTime;
-    private String processedBy; // Which processor handled it
-    private String enrichedInfo; // Additional metadata
-    private String validationResult; // VALID, INVALID
 
     public ProcessedData() {}
 
@@ -27,10 +24,4 @@ public class ProcessedData {
     public void setStatus(String status) { this.status = status; }
     public Long getProcessingTime() { return processingTime; }
     public void setProcessingTime(Long time) { this.processingTime = time; }
-    public String getProcessedBy() { return processedBy; }
-    public void setProcessedBy(String by) { this.processedBy = by; }
-    public String getEnrichedInfo() { return enrichedInfo; }
-    public void setEnrichedInfo(String info) { this.enrichedInfo = info; }
-    public String getValidationResult() { return validationResult; }
-    public void setValidationResult(String result) { this.validationResult = result; }
 }

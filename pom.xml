@@ -11,7 +11,7 @@
 	<groupId>com.demoSI</groupId>
 	<artifactId>demoSI</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>demoSI_AdvanceSetting</name>
+	<name>demoSI</name>
 	<description>Demo project for Spring Integration</description>
 	<url/>
 	<licenses>
