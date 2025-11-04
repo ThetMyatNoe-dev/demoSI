@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: data-processing-service
+
+  integration:
+    channel:
+      auto-create: true
+      max-subscribers: 5
+
+logging:
+  level:
+    com.example: DEBUG
+    org.springframework.integration: INFO
+
+server:
+  port: 8081
