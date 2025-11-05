@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/data")
+@RequestMapping("/api/demoSI")
 public class DataController {
 
     @Autowired
@@ -19,12 +19,12 @@ public class DataController {
 
     /**
      * Endpoint to trigger data processing
-     * POST http://localhost:8080/api/data/process
+     * POST http://localhost:8081/api/demoSI/process
      */
     @PostMapping("/process")
     public ResponseEntity<String> processData(@RequestBody DataRequest request) {
 
-        // Simply call the gateway - it handles everything else
+        //  call the gateway
         dataProcessingGateway.processData(request.getDataId());
 
         return ResponseEntity.accepted()

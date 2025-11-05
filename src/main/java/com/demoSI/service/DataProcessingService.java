@@ -16,6 +16,7 @@ public class DataProcessingService {
      * This is where your business logic happens
      */
     public ProcessedData process(RawData rawData) {
+
         log.info("Processing data with ID: {}", rawData.getId());
 
         long startTime = System.currentTimeMillis();
@@ -37,7 +38,7 @@ public class DataProcessingService {
             ProcessedData result = new ProcessedData(
                     rawData.getId(),
                     processedContent,
-                    "SUCCESS",
+                    "FAILED",
                     processingTime
             );
 

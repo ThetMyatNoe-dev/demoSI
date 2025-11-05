@@ -3,6 +3,7 @@ package com.demoSI.config;
 import com.demoSI.model.ProcessedData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.annotation.IntegrationComponentScan;
@@ -10,7 +11,9 @@ import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.integration.channel.DirectChannel;
 import org.springframework.integration.channel.QueueChannel;
 import org.springframework.integration.config.EnableIntegration;
+import org.springframework.integration.core.MessagingTemplate;
 import org.springframework.integration.dsl.IntegrationFlow;
+import org.springframework.integration.support.MessageBuilder;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 
@@ -21,9 +24,10 @@ public class DataIntegrationConfig {
 
     private static final Logger log = LoggerFactory.getLogger(DataIntegrationConfig.class);
 
+
     /**
      * Main integration flow - connects all services
-     * This is the pipeline: Read -> Process -> Write -> Notify
+     * This is like  pipeline: Read -> Process -> Write -> Notify
      */
     @Bean
     public IntegrationFlow dataProcessingFlow() {
@@ -86,20 +90,66 @@ public class DataIntegrationConfig {
         return new QueueChannel(100); // Queue for failed messages
     }
 
+    @Bean
+    public MessageChannel retryChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel deadLetterChannel() {
+        return new QueueChannel(100);
+    }
+
+
     /**
-     * Error handler
-     * "Hey, whenever a message arrives on this channel, automatically call this method!"
-     *
-     * It's like setting up a listener or subscriber for a specific message channel.
-     * 1. **A message fails** somewhere in your integration flow
-     * 2. **Filter sends it** to `errorChannel`
-     * 3. **Spring Integration sees** a message on `errorChannel`
-     * 4. **Automatically calls** `handleError()` method
-     * 5. **You handle the error** (log it, retry, save to DB, etc.)
+     * Error handler with retry logic
      */
     @ServiceActivator(inputChannel = "errorChannel")
     public void handleError(Message<?> message) {
-        log.error("Error in processing flow: {}", message.getPayload());
-        // You can implement retry logic, dead letter queue, etc.
+        ProcessedData failedData = (ProcessedData) message.getPayload();
+        int retryCount = (int) message.getHeaders().getOrDefault("retryCount", 0);
+
+        if (retryCount < 3) {
+            log.info("Retrying processing for ID: {} (Attempt {})",
+                    failedData.getId(), retryCount + 1);
+
+            // Send the dataId (String) not the ProcessedData object
+            Message<String> retryMessage = MessageBuilder
+                    .withPayload(failedData.getId())  // Extract String ID
+                    .setHeader("retryCount", retryCount + 1)
+                    .build();
+
+            retryChannel().send(retryMessage);
+        } else {
+            log.error("Max retries reached for ID: {}", failedData.getId());
+            deadLetterChannel().send(message);
+        }
+    }
+
+    /**
+     * Retry flow - processes messages from retry channel
+     */
+    @Bean
+    public IntegrationFlow retryFlow() {
+        return IntegrationFlow
+                .from("retryChannel")
+                // Send back to the beginning of main flow
+                .channel("dataInputChannel")
+                .get();
+    }
+
+    /**
+     * Dead letter handler
+     */
+    @ServiceActivator(inputChannel = "deadLetterChannel")
+    public void handleDeadLetter(Message<?> message) {
+        ProcessedData failedData = (ProcessedData) message.getPayload();
+        log.error("DEAD LETTER: Failed to process data after max retries: {}", failedData);
+
+        // Here you could:
+        // - Save to database table for manual review
+        // - Send alert to monitoring system
+        // - Write to file system
+        // - Send email notification
     }
 }

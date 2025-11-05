@@ -28,18 +28,11 @@ public class DataReadingService {
             Thread.currentThread().interrupt();
         }
 
-        // Determine properties based on dataId
-        String source = determineSource(dataId);
-        String priority = determinePriority(dataId);
-        String category = determineCategory(dataId);
-
         // In real scenario, you'd query database or call external API
         RawData data = new RawData(
                 dataId,
                 "Sample content for " + dataId,
-                source,      // NEW: source parameter
-                priority,    // NEW: priority parameter
-                category     // NEW: category parameter
+                "DATABASE"
         );
 
         log.info("Successfully read data: {}", dataId);
@@ -54,26 +47,5 @@ public class DataReadingService {
         return dataIds.stream()
                 .map(this::readData)
                 .collect(Collectors.toList());
-    }
-
-    // Helper methods to determine properties from dataId
-    private String determineSource(String dataId) {
-        if (dataId.startsWith("DB")) return "DATABASE";
-        if (dataId.startsWith("API")) return "API";
-        if (dataId.startsWith("FILE")) return "FILE";
-        return "DATABASE"; // default
-    }
-
-    private String determinePriority(String dataId) {
-        if (dataId.contains("URGENT") || dataId.contains("HIGH")) return "HIGH";
-        if (dataId.contains("NORMAL") || dataId.contains("MEDIUM")) return "MEDIUM";
-        return "LOW"; // default
-    }
-
-    private String determineCategory(String dataId) {
-        if (dataId.contains("FIN")) return "FINANCIAL";
-        if (dataId.contains("PER")) return "PERSONAL";
-        if (dataId.contains("BUS")) return "BUSINESS";
-        return "BUSINESS"; // default
     }
 }

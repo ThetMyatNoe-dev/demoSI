@@ -1,49 +1,106 @@
-Expected Flow:
+📋 Main Flow (Happy Path):
+dataInputChannel → Read → Process → Filter → Write → Notify ✓
 
-✅ Transformer: Converts to RawData with source="DATABASE"
-✅ Filter: Validates data
-✅ Router: Routes to databaseProcessingChannel
-✅ Service Activator: processDatabaseData() processes it
-✅ Result: [DB-PROCESSED]
+🎯Error Path (Failed Processing):
+Filter Rejection → errorChannel → Retry Logic → retryChannel → dataInputChannel (loop back)
 
+Dead Letter Path (Max Retries Exceeded):
+errorChannel → deadLetterChannel → Log & Alert
 
-TRANSFORMER: Converting dataId DB-FIN-URGENT-123 to RawData object
-TRANSFORMER: Created RawData with source=DATABASE, priority=HIGH
-FILTER: Validating data for ID: DB-FIN-URGENT-123
-FILTER: Data ACCEPTED for ID: DB-FIN-URGENT-123
-ROUTER: Routing data ID: DB-FIN-URGENT-123 from source: DATABASE
-ROUTER: Routing to DATABASE processor
-SERVICE ACTIVATOR: Processing DATABASE data for ID: DB-FIN-URGENT-123
-
-📋 Component Summary
-Transformers (3 types)
-
-String → RawData: Converts input string to object
-Normalize: Cleans and standardizes data
-Add Headers: Enriches message with metadata
-
-Filters (4 types)
-
-Validate: Checks content validity
-Timestamp: Filters old data
-Success: Only allows successful processing
-Priority: Filters by priority level
-
-Routers (3 types)
-
-By Source: Routes to DATABASE/API/FILE processors
-By Priority: Routes to fast/standard lanes
-By Category: Routes to multiple channels (audit, compliance, etc.)
-
-Service Activators (8 types)
-
-Database Processor: Processes database data
-API Processor: Processes API data
-File Processor: Processes file data
-Data Enrichment: Adds metadata
-Error Handler: Handles failures
-Invalid Data Handler: Handles validation failures
-Old Data Archiver: Archives old data
-Audit Logger: Logs financial data
+-----------------------------------------------------------------------------------------------
 
 
+When call dataProcessingGateway.processData(request.getDataId()): Example calling like below
+
+dataProcessingGateway.processData("DATA123");
+
+** Step1 - Gateway Proxy Intercepts**
+
+// Spring's proxy intercepts and does:
+Message<String> message = MessageBuilder
+    .withPayload("DATA123")  // Your dataId
+    .build();
+
+// Then sends to the channel specified in @Gateway
+dataInputChannel.send(message);
+```
+**Step 2: Flow Execution Begins for Happy Case **
+```
+Message arrives at dataInputChannel
+    ↓
+┌─────────────────────────────────────────┐
+│ Handler 1: dataReadingService.readData()│
+│ Input: "DATA123"                        │
+│ Output: RawData object                  │
+└─────────────────────────────────────────┘
+    ↓
+Message sent to readDataChannel
+    ↓
+┌─────────────────────────────────────────┐
+│ Handler 2: dataProcessingService.process│
+│ Input: RawData                          │
+│ Output: ProcessedData object            │
+└─────────────────────────────────────────┘
+    ↓
+Message sent to processedDataChannel
+    ↓
+┌─────────────────────────────────────────┐
+│ Filter: Check status                    │
+│ If status == "SUCCESS": continue        │
+│ If status != "SUCCESS": → errorChannel  │
+└─────────────────────────────────────────┘
+    ↓ (if SUCCESS)
+Message sent to writtenDataChannel
+    ↓
+┌─────────────────────────────────────────┐
+│ Handler 3: dataWritingService.write()   │
+│ Input: ProcessedData                    │
+│ Output: WrittenData                     │
+└─────────────────────────────────────────┘
+    ↓
+Message sent to writtenDataChannel
+    ↓
+┌─────────────────────────────────────────┐
+│ Handler 4: notificationService.notify() │
+│ Input: WrittenData                      │
+│ Output: (void or notification result)   │
+└─────────────────────────────────────────┘
+    ↓
+Flow Complete ✓
+
+
+## 📊 **Complete Message Journey Diagram**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     HAPPY PATH                               │
+│  Gateway → Read → Process → Filter → Write → Notify ✓       │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                   RETRY PATH (retryCount < 3)                │
+│                                                              │
+│  Filter REJECT → errorChannel                                │
+│       ↓                                                      │
+│  handleError (check retryCount)                              │
+│       ↓                                                      │
+│  Create retry message (increment retryCount)                 │
+│       ↓                                                      │
+│  retryChannel                                                │
+│       ↓                                                      │
+│  dataInputChannel (LOOP BACK TO START)                       │
+│       ↓                                                      │
+│  Repeat flow...                                              │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                DEAD LETTER PATH (retryCount >= 3)            │
+│                                                              │
+│  Filter REJECT → errorChannel                                │
+│       ↓                                                      │
+│  handleError (check retryCount)                              │
+│       ↓                                                      │
+│  retryCount >= 3 → deadLetterChannel                         │
+│       ↓                                                      │
+│  handleDeadLetter (log, alert, persist)                      │
+│       ↓                                                      │
+│  END (no more retries)                                       │
