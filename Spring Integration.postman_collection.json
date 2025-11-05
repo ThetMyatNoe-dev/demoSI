@@ -1,0 +1,48 @@
+{
+	"info": {
+		"_postman_id": "cd75449e-7dc5-42d7-80e9-8c5a46722e4e",
+		"name": "Spring Integration",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "demoSI_AdvanceSetting",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"dataId\": \"DB-FIN-URGENT-123\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8081/api/data/process",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"data",
+						"process"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "demoSI",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": null
+			},
+			"response": []
+		}
+	]
+}

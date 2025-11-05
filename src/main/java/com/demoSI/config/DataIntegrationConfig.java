@@ -146,10 +146,5 @@ public class DataIntegrationConfig {
         ProcessedData failedData = (ProcessedData) message.getPayload();
         log.error("DEAD LETTER: Failed to process data after max retries: {}", failedData);
 
-        // Here you could:
-        // - Save to database table for manual review
-        // - Send alert to monitoring system
-        // - Write to file system
-        // - Send email notification
     }
 }
